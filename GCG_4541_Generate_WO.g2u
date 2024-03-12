@@ -1,0 +1,88 @@
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+'this program will run from the script button in the sales order header
+'it will allow the user to create a work order for the sales order
+
+F.ODBC.Connection!con.OpenConnection(v.Ambient.PDSN, v.Ambient.PUser, v.Ambient.PPass)
+
+Function.Intrinsic.Control.If(V.Caller.Hook, =, "11560")
+	V.Passed.000203.Set("Generate WO")
+Function.Intrinsic.Control.ElseIf(V.Caller.Hook, =, "11930")
+	Function.Intrinsic.Control.CallSub(create_wo)
+Function.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4541_Generate_WO.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	Function.Intrinsic.Control.CallSub(unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.CREATE_WO.Start
+F.Intrinsic.Control.SetErrorHandler("CREATE_WO_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+V.Local..BulkDeclareString(sFlag, sOrderNO, ssql, sParam)
+V.Local.iC.Declare(Long)
+
+F.Intrinsic.UI.Msgbox("Would you like to generate a Work Order for this Sales Order?", "Work Order Generation", 4, V.Local.sFlag)	
+F.Intrinsic.Control.If(V.Local.sFlag, =, 7)		
+	F.Intrinsic.Control.CallSub(unload)		
+F.Intrinsic.Control.EndIf
+
+Function.Intrinsic.UI.InvokeWaitDialog("Generating Work Orders...", "Work Orders")
+
+V.Local.sOrderNO.Set(V.Passed.000003)
+F.Intrinsic.String.LPad(V.Local.sOrderNO, "0", 7, V.Local.sOrderNO)	
+'select to dataTable the order lines
+F.Intrinsic.String.Build("Select RECORD_NO From ORDER_LINES Where ORDER_NO = '{0}'", V.Local.sOrderNO, V.Local.ssql)
+F.Data.DataTable.CreateFromSQL("REC", "con", V.Local.ssql)
+
+'loop through dataTable for each line and create WO
+F.Intrinsic.Control.For(V.Local.iC, 0, V.DataTable.REC.RowCount--, 1)
+	F.Intrinsic.String.Build("O!*!{0}!*!{1}!*!1!*!1!*!!*!!*!!*!!*!!*!!*!!*!!*!", V.Local.sOrderNO, V.DataTable.REC(V.Local.iC).RECORD_NO!FieldVal, V.Local.sParam)
+	F.Global.General.CallWrapperSync(200803, v.Local.sParam)
+F.Intrinsic.Control.Next(V.Local.iC)
+	
+F.Intrinsic.UI.CloseWaitDialog	
+	
+F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.Label("CREATE_WO_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4541_Generate_WO.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	Function.Intrinsic.Control.CallSub(unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.CREATE_WO.End
+
+Program.Sub.UNLOAD.Start
+F.Intrinsic.Control.SetErrorHandler("UNLOAD_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.Label("UNLOAD_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4541_Generate_WO.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	Function.Intrinsic.Control.End
+
+Function.Intrinsic.Control.EndIf
+Program.Sub.UNLOAD.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$DH1$}$6/13/2017 9:05:38 AM$}$True
+Program.Sub.Comments.End
